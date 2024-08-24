@@ -1,0 +1,48 @@
+html {
+  font-size: 14px;
+}
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  margin-bottom: 60px;
+}
+.content {
+    display: grid;
+    grid-template-columns:18% 85%;
+    grid-template-rows: 100%;
+}
+.sidebar {
+    grid-column-start: 1;
+    border:none;
+    padding: 10px;
+    font-size:12px;
+}
+.text-center {
+    grid-column-start: 2;
+}
+table, th, td {
+    border: 1px solid black;
+}
+table {
+    margin-left: auto;
+    margin-right: auto;
+}
+.link{
+    color:aqua;
+}
+.boldSubmit{
+    font-weight:bold;
+}
+.viewTables {
+    margin: auto;
+    border: 1px solid black;
+    border-collapse: collapse;
+    background-color:silver;
+}

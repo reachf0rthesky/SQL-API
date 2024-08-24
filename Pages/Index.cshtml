@@ -1,0 +1,458 @@
+﻿@page
+@model IndexModel
+@using System.Data;
+@{
+    ViewData["Title"] = "Datenbank Management System";
+}
+<script>
+    document.getElementById("submitter").disabled = false;
+    function clicked(e)
+    {
+        if(!confirm('Sind sie sicher, dass sie den Löschvorgang durchführen wollen?')) {
+            e.preventDefault();
+        }
+    }
+</script>
+<div class="content">
+    <div class="sidebar">
+        <div class="logo">
+            <i class="bx bx-menu menu-icon"></i>
+            <span class="logo-name"><h3>Importierte Datenbanken</h3><br /><br /></span>
+        </div>
+        <div class="sidebar-content">
+            @{
+                //Die Datenbanken, die bereits in mysql vorhanden sind, werden hier geladen, falls es welche gibt
+                if(Model.databases == null) {
+                    Model.action = "addalreadyexistingdbs";
+                    Model.OnPost();
+                    Model.action = "startsite";
+                }
+                //Wenn vorhandene DB gefunden wurden, werden sie hier in der Seitenleiste angezeigt
+                if(Model.databases?.Count > 0) {
+                    foreach(Database database in @Model.databases) {
+                            <text>
+                                <form method="post">
+                                    <i class="bx bx-home-alt icon"></i>
+                                    <h6><input type="submit" class="boldSubmit" value="@database.databaseName"></h6>
+                                    <input type="hidden" name="navdatabase" value="viewDatabase,@database.databaseName">
+                                </form>
+                            </text>
+                        foreach(Table datatable in database.tables) {
+                                <text>
+                                    <form method="post">
+                                        <i class="bx bx-home-alt icon"></i>
+                                        &emsp;<input type="submit"value="@datatable.tableName" />
+                                        <input type="hidden" name="navdatatable" value="viewDatatable,@database.databaseName,@datatable.tableName">
+                                    </form>
+                                </text>
+                        }
+                        if(database.tables.Count > 0) {
+                                <text><br /></text>
+                        }
+                    }
+                        <text>
+                        <form method="post">
+                            <input type="submit" class="boldSubmit" name="createBtn" value="Neue Datenbank erstellen" />
+                            <input type="hidden" name="createDatabase" value="create" /><br>
+                        </form>
+                        </text>
+                }
+                //Wenn keine DBs vorhanden sind, wird dies hier angezeigt und es ist möglich eine DB erstellen
+                else {
+                        <form method="post">
+                            Im Moment sind noch keine Datenbanken in mySQL<br /> <br /><br />
+                            <input type="submit" name="createBtn" class="boldSubmit" value="Neue Datenbank erstellen" />
+                            <input type="hidden" name="createDatabase" value="create" />
+                        </form>
+                }
+            }
+        </div>
+    </div>
+    <div class="text-center">
+        <form method="post">
+            @{
+                //Hier wird das Inhaltsfenster aufgebaut, je nachdem, was der Benutzer sieht
+                //Wenn ein Fehler auftritt, wird dieses Inhaltsfenster angezeigt
+                if(Model.errorStackTrace != null) {
+                    if(Model.errorStackTrace.Count > 0) {
+                            <text>
+                                <br><br><br>
+                                <h1>Folgende Fehler sind passiert:</h1> <br>
+                            </text>
+                        foreach(Exception ex in Model.errorStackTrace) {
+                                <text>
+                                    @ex.Message <br>
+                                </text>
+                        }
+                        Model.action = "startseite";
+                    }
+                }
+                //Startseite
+                if(@Model.action.ToLower() == "startsite") {
+                        <text>
+                            <br><br><br><br>
+                            <h1>Startseite</h1>
+                            <br><br><br><br>
+                            <h3>
+                                Willkommen zu meinem Datenmodifikationsprogramm<br />
+                                Author: Benjamin Born
+                            </h3>
+                        </text>
+                }
+                //Neue Datenbank erstellen
+                else if(@Model.action.ToLower() == "create") {
+                        <text>
+                            <h1>Neue Datenbank erstellen</h1><br>
+                            Datenbankname: <input type="text" name="txtNewDataBase" required>
+                            <br><br>
+                            <input type="submit" class="boldSubmit" value="Submit">
+                        </text>
+                }
+                //Neue Tabelle erstellen
+                else if(@Model.action.ToLower() == "createnewtable") {
+                        <text>
+                            <h1>Neue Tabelle erstellen</h1><br>
+                            Tabellenname: <input type="text" name="txtNewDataTable" required>
+                            <br><br>
+                            Spalte 1:<br>
+                            Spaltenname: <input type="text" name="columnName1" required> Spaltentyp:
+                            <select name="columnType1" required>
+                                <option value="varchar">VarChar</option>
+                                <option value="integer">Integer</option>
+                                <option value="decimal">Decimal</option>
+                            </select>
+                            <br><br>
+                        </text>
+                    for(int i = 2; i <= 5; i++) {
+                                    <text>
+                                    Spalte @i:<br>
+                                    Spaltenname: <input type="text" name="columnName@(i)"> Spaltentyp:
+                                    <select name="columnType@(i)">
+                                        <option value="varchar">VarChar</option>
+                                        <option value="integer">Integer</option>
+                                        <option value="decimal">Decimal</option>
+                                    </select>
+                                    <br><br>
+                                    </text>
+                    }
+                        <text><br /><input type="submit" class="boldSubmit" value="Submit"></text>
+                }
+                //Tabelle ändern
+                else if(@Model.action.ToLower() == "altertable") {
+                             <h1>Spalten der Tabelle @Model.GetTable().tableName ändern</h1><br />
+                            @:<table>
+                            @:<tr>
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                            @:<th>
+                            Boolean added = false;
+                            foreach(DataRow row in @Model.GetDatabase().tableConstraints.Rows){
+                                if (row[1].ToString()==@col.ColumnName && row[0].ToString()== @Model.GetTable().tableName){
+                                    if(row[2].ToString()=="" && row[3].ToString()==""){
+                                        @:[PRK]@col.ColumnName.ToString()
+                                        added = true;
+                                        break;
+                                    }
+                                    else{
+                                        @:[FRK]@col.ColumnName.ToString()
+                                        added = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if(!added){
+                             @col.ColumnName.ToString()
+                            }
+                            @:</th>
+                        }
+                            @:</tr>
+                            @:<tr>
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <td>
+                                @col.DataType.Name
+                                </td>
+                        }
+                            @:</tr>
+                            @:<tr>
+                            @:<th colspan="@Model.GetTable().table.Columns.Count">Neue Attribute:</th>
+                            @:</tr>
+                            @:<tr>
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <th>
+                                Name
+                                </th>
+                        }
+                            @:</tr>
+                            @:<tr>
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <th>
+                                <input type="text" name="@col.ColumnName.ToString(),Name">
+                                </th>
+                        }
+                            @:</tr>
+                            @:<tr>
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <th>
+                                Datentyp
+                                </th>
+                        }
+                            @:</tr>
+                            @:<tr>
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <td>
+                                <select name="@col.ColumnName.ToString(),Datentyp">
+                                    <option value=""></option>
+                                    <option value="String">String</option>
+                                    <option value="Int32">Int32</option>
+                                    <option value="Double">Double</option>
+                                </select>
+                                </td>
+                        }
+                            @:</tr>
+                            @:</table>
+                            <text>
+                            
+                            <br /><input type="submit"  class="boldSubmit" value="Submit">
+                            <input type="hidden" name="altertable" value="altertable,@Model.GetDatabase().databaseName,@Model.GetTable().tableName">
+                            <br><hr>
+                            <h1>Neue Spalte in der Tabelle @Model.GetTable().tableName erstellen</h1>
+                            <br>
+                            Name: <input type="text" name="newColName">
+                            Datentyp: <select name="newColType">
+                                <option value=""></option>
+                                <option value="String">String</option>
+                                <option value="Int32">Int32</option>
+                                <option value="Double">Double</option>
+                            </select>
+                            <br><br>
+                            <input type="submit" class="boldSubmit" name="altertableaddcol" value="Submit" />
+                            <input type="hidden" name="createnewcol" value="createnewcol" />
+                            <hr>
+                            (Sie können nur eine der beiden Aktionen auf einmal aufführen)
+                            </text>
+                }
+                // Neue Tabellenreihe hinzufügen
+                else if(@Model.action.ToLower() == "addnewtablerow") {
+                        <h1>Neue Tabellenreihe hinzufügen</h1>
+                        @:<table>
+                        @:<tr>
+                    foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                @:<th>
+                            Boolean added = false;
+                            foreach(DataRow row in @Model.GetDatabase().tableConstraints.Rows){
+                                if (row[1].ToString()==@col.ColumnName && row[0].ToString()== @Model.GetTable().tableName){
+                                    if(row[2].ToString()=="" && row[3].ToString()==""){
+                                        @:[PRK]@col.ColumnName.ToString()
+                                        added = true;
+                                        break;
+                                    }
+                                    else{
+                                        @:[FRK]@col.ColumnName.ToString()
+                                        added = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if(!added){
+                             @col.ColumnName.ToString()
+                            }
+                            @:</th>
+                    }
+                        @:</tr>
+                        @:<tr>
+                    foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <td>
+                                @col.DataType.Name
+                                </td>
+                    }
+                        @:</tr>
+                        @:<tr>
+                    int i = 1;
+                    foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                <td><input type="text" width="20" name="columnName@(i)" required></td>
+                        i++;
+                    }
+                        @:</tr>
+                        @:</table>
+                        <text>
+                            <br /><input type="submit" class="boldSubmit" name="createBtn" value="Tabellenreihe erstellen" />
+                        </text>
+                }
+                //Datenbanken anzeigen
+                else if(@Model.action.ToLower() == "viewdatabase") {
+                        @:<br><h1>Datenbank: @Model.GetDatabase().databaseName<br>Tabellen:<br></h1><br>
+                        @:<table class="viewTables">
+                    foreach(Table table in @Model.GetDatabase().tables) {
+                            <tr>
+                            <td>
+                            <input type="submit" name="viewTableNames" value="@table.tableName" />
+                            <input type="hidden" name="navdatatable" value="viewDatatable,@Model.GetDatabase().databaseName,@table.tableName">
+                            </td>
+                            </tr>
+                    }
+                         @:</table>
+                        <text>
+                        <br>
+                        <input type="submit" class="boldSubmit" name="createBtn" value="Neue Tabelle erstellen" />
+                        <input type="hidden" name="createnewTable" value="createnewtable,@Model.GetDatabase().databaseName" />
+                        <br><hr>
+                        Datenbank Filtern:
+                        Suchart: <select name="searchType">
+                            <option value="table">Table</option>
+                            <option value="data">Data</option>
+                            <option value="column">Column</option>
+                        </select>
+                        <br /><br>Suchtext: <input type="text" name="searchkeyword">
+                        <input type="hidden" name="searchDatabases" value="searchkeyword" />
+                        <br><br /><input type="submit" class="boldSubmit" name="searchBtn" value="Datenbank filtern" />
+                        <br><hr>
+                        <input type="submit" class="boldSubmit" name="deleteBtn" value="Datenbank löschen" onclick="clicked(event)"/>
+                        <input type="hidden" name="deleteDatabase" value="delete,database,@Model.GetDatabase().databaseName" />
+                        <br><hr>
+                        <input type="submit" class="boldSubmit" name="changeRelationsBtn" value="Relationen der Tabellen ändern" />
+                        <input type="hidden" name="changeTableRelations" value="changeRelations" />
+                        <br><hr>
+                        </text>
+                }
+                //Tabelle anzeigen
+                else if(@Model.action.ToLower() == "viewdatatable") {
+                        @:<br><h1>Tabelle: @Model.tableName</h1><br>
+                        @:<table>
+                        @:<tr>
+                    //Alle Kopfzeilen der Tabelle anzeigen
+                    foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                        @:<th>
+                        Boolean added = false;
+                            foreach(DataRow row in @Model.GetDatabase().tableConstraints.Rows){
+                                    if (row[1].ToString()==@col.ColumnName && row[0].ToString()==@Model.GetTable().tableName){
+                                        if(row[2].ToString()=="" && row[3].ToString()==""){
+                                            @:[PRK]@col.ColumnName.ToString()
+                                            added = true;
+                                            break;
+                                        }
+                                        else{
+                                            @:[FRK]@col.ColumnName.ToString()
+                                            added = true;
+                                            break;
+                                        }
+                                    }
+                            }
+                        if(!added){
+                        @col.ColumnName.ToString()
+                        }
+                        @:</th>
+                    }
+                        @:</tr>
+                    foreach(DataRow row in @Model.GetTable().table.Rows) {
+                            @:<tr>
+                            //Alle Zellen der Tabelle anzeigen
+                        foreach(DataColumn col in @Model.GetTable().table.Columns) {
+                                    <td>
+                                    @row[col].ToString()
+                                    </td>
+                        }
+                            @:</tr>
+                    }
+                        @:</table>
+                    //Funktionen nach der Anzeige
+                        <text>
+                            <br><hr>
+                            <input type="submit" class="boldSubmit" name="createBtn" value="Neue Reihe hinzufügen" />
+                            <input type="hidden" name="createnewtablerow" value="addnewtablerow,@Model.GetDatabase().databaseName,@Model.GetTable().tableName" />
+                            <br><hr>
+                            <input type="submit" class="boldSubmit" name="alterBtn" value="Tabellenattribute ändern" />
+                            <input type="hidden" name="alterTable" value="altertable,@Model.GetDatabase().databaseName,@Model.GetTable().tableName" />
+                            <input type="submit" class="boldSubmit" name="deleteBtn" value="Tabelle löschen"  onclick="clicked(event)"/>
+                            <input type="hidden" name="deleteDatabase" value="delete,table,@Model.GetDatabase().databaseName,@Model.GetTable().tableName" />
+                            <br><hr>
+                            
+                        </text>
+                }
+                //Filter Ergebnisse anzeigen
+                else if (@Model.action.ToLower() == "showfiltererg") {
+                    if (@Model.searchFoundValues.Count==0){
+                            <text>
+                            <br />Es wurden keine Ergebnisse bei der Suche gefunden
+                            <br> <a class="link" asp-area="" asp-page="/Index">Zur Startseite</a>
+                            </text>
+                    }
+                    else{
+                            @:<table >
+                            @:Folgende Ergebnisse wurden bei der Suche nach "@Model.searchKeyWord" gefunden:
+                        foreach(String str in @Model.searchFoundValues) {
+                                @:<tr>
+                                    <th>Datenbankname</th>
+                                    <th>Tabellenname</th>
+                                    <th>Spaltenname</th>
+                                    <th>Reihenposition</th>
+                                @:</tr>
+                                @:<tr>
+                            foreach(String strInner in str.Split(' ')) {
+                                    <td>
+                                        @strInner
+                                    </td>
+                            }
+                            @:</tr>
+                        }
+                            @:</table >
+                    }
+                }
+                else if (@Model.action.ToLower() == "changerelations") {
+                    <h1>Relationen in der Datenbank @Model.GetDatabase().databaseName hinzufügen</h1>
+                    @:<table>
+                    foreach(Table table in @Model.GetDatabase().tables) {
+                            <text>
+                            <tr>
+                            <th>
+                            @table.tableName
+                            </th>
+                            </text>
+                        foreach(DataColumn col in table.table.Columns) {
+                             @:<td>
+                            Boolean added = false;
+                            foreach(DataRow row in @Model.GetDatabase().tableConstraints.Rows){
+                                if (row[1].ToString()==@col.ColumnName && row[0].ToString()== table.tableName){
+                                    if(row[2].ToString()=="" && row[3].ToString()==""){
+                                        @:[PRK]@col.ColumnName.ToString()
+                                        added = true;
+                                        break;
+                                    }
+                                    else{
+                                        @:[FRK]@col.ColumnName.ToString()
+                                        added = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if(!added){
+                             @col.ColumnName.ToString()
+                            }
+                            @:</td>
+                        }
+                            @:</tr>
+                    }
+                         @:</table>
+                         @:<table>
+                          @:<tr><th>Primary Key</th><th>Foreign Key</th></tr>
+                          @:<br /><br />
+                          @:<tr><td><select name="PrimaryKey">
+                      foreach(Table table in @Model.GetDatabase().tables) {
+                          foreach(DataColumn col in table.table.Columns) {
+                                <option value="@table.tableName,@col.ColumnName">[@table.tableName]@col.ColumnName</option>
+                          }
+                      }
+                         @:</select></td>
+                          @:<td><select name="ForeignKey">
+                      foreach(Table table in @Model.GetDatabase().tables) {
+                          foreach(DataColumn col in table.table.Columns) {
+                                <option value="@table.tableName,@col.ColumnName">[@table.tableName]@col.ColumnName</option>
+                          }
+                      }
+                         @:</select></td></tr>
+                         @:</table>
+                         <br><input type="submit" class="boldSubmit" name="changeRelations" value="Primär- und Fremdschlüssel Verbindung hinzufügen" />
+                         <input type="hidden" name="changeTableRelations" value="altertable,@Model.databaseName,@Model.tableName" />
+                }
+            }
+        </form>
+    </div>
+</div>
